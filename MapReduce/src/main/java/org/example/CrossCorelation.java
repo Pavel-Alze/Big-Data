@@ -26,21 +26,30 @@ public class CrossCorelation {
         private ArrayList<Text> products;
 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            products = new ArrayList<>();
-
+           products = new ArrayList<String>();
             StringTokenizer st = new StringTokenizer(value.toString(), ",");
 
             while (st.hasMoreTokens()) {
                 Text word = new Text();
                 word.set(st.nextToken());
-                products.add(word);
+                products.add(String.valueOf(word));
             }
+            String[] ts = new String[products.size()];
+            for(int i=0;i<ts.length;i++){
+                ts[i]=products.get(i);
+            }
+            Arrays.sort(ts);
+            //System.out.println(Arrays.toString(ts));
+            products = new ArrayList<>(Arrays.asList(ts));
 
-            for(int i = 0; i < products.size(); ++i)
-                for(int j = 0; j < products.size(); ++j)
+            for(int i = 0; i < products.size(); ++i) {
+                //System.out.println("@" + products.get(i));
+                for (int j = i + 1; j < products.size(); ++j) {
                     if (products.get(i) != products.get(j)) {
                         context.write(new Text(products.get(i).toString() + "," + products.get(j).toString()), one);
                     }
+                }
+            }
         }
     }
 
