@@ -47,21 +47,25 @@ public class Rec2 {
             int i = 0;
             System.out.println();
             while (b) {
+                System.out.println("i^"+i);
                 String[] keyset = tr.keySet().toArray(new String[0]);
-                if (tr.get(keyset[i]) < tr.get(keyset[i + 1])) {
-                    String temp_k = keyset[i];
-                    int temp_v = tr.get(keyset[i]);
-                    tr.remove(temp_k);
-                    tr.put(temp_k, temp_v);
-                    i=0;
-                } else {
-                    i++;
-                }
-                if (i == tr.size() - 1) {
-                    b = false;
-                }
-                if (i == 10) {
-                    b = false;
+                System.out.println("s^"+tr.size());
+                if(tr.size()==1){b=false;}else {
+                    if (tr.get(keyset[i]) < tr.get(keyset[i + 1])) {
+                        String temp_k = keyset[i];
+                        int temp_v = tr.get(keyset[i]);
+                        tr.remove(temp_k);
+                        tr.put(temp_k, temp_v);
+                        i = 0;
+                    } else {
+                        i++;
+                    }
+                    if (i == tr.size() - 1) {
+                        b = false;
+                    }
+                    if (i == 10) {
+                        b = false;
+                    }
                 }
             }
             System.out.println("-------------------");
