@@ -1,0 +1,70 @@
+HIVE
+beeline -u jdbc:hive2://localhost:10000 -n `whoami`
+1:
+create table firsttable(id int,name string);
+insert into firsttable(id,name) values(1,"pop");
+insert into firsttable(id,name) values(2,"pol");
+insert into firsttable(id,name) values(3,"pok");
+insert into firsttable(id,name) values(4,"pod");
+insert into firsttable(id,name) values(5,"pov");
+
+
+2:
+create table secondtable(name string,surname string);
+insert into secondtable(name,surname) values("pol","ai");
+insert into secondtable(name,surname) values("pov","aeg");
+insert into secondtable(name,surname) values("pop","man");
+insert into secondtable(name,surname) values("poi","def");
+insert into secondtable(name,surname) values("pow","lux");
+
+3:
+create table thirdtable(name string,car string);
+insert into thirdtable(name,car) values("pol","vw");
+insert into thirdtable(name,car) values("pow","bmw");
+insert into thirdtable(name,car) values("pod","vw");
+insert into thirdtable(name,car) values("poi","vaz");
+insert into thirdtable(name,car) values("pok","subaru");
+
+JOIN 1-2:
+select * from firsttable full outer join secondtable on firsttable.name = secondtable.name;
+
+JOIN 1-3:
+select * from firsttable left join thirdtable on firsttable.name = thirdtable.name;
+
+JOIN 2-3:
+select * from secondtable left join thirdtable on secondtable.name = thirdtable.name;
+
+GROUP BY:
+select car,count(car) from thirdtable group by car;
+
+WHERE:
+select * from thirdtable where car='vw';
+
+============================================
+
+PIG
+
+1:
+firsttable = LOAD 'pig' using PigStorage(',') AS (id:int, name:chararray);
+
+2:
+secondtable = LOAD 'pig1' using PigStorage(',') AS (name:chararray, surname:chararray);
+
+3:
+thirdtable = LOAD 'pig2' using PigStorage(',') AS (name:chararray, car:chararray);
+
+JOIN 1-2:
+fulltable = JOIN firsttable BY name FULL, secondtable BY name;
+
+JOIN 1-3:
+lefttable = JOIN firsttable BY name LEFT OUTER, thirdtable BY name;
+
+JOIN 2-3:
+jointable = JOIN secondtable BY name, thirdtable BY name;
+
+GROUP BY:
+grouptable = GROUP thirdtable BY car;
+counttable = FOREACH grouptable GENERATE group AS car, COUNT(thirdtable) AS count;
+
+WHERE:
+selecttable = FILTER thirdtable BY car == 'vw';
