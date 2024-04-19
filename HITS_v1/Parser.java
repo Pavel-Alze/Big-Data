@@ -25,13 +25,13 @@ public class Parser {
         String localContent = new String(bytes, StandardCharsets.UTF_8);
         inputStream.close();
         String[] lines = localContent.split("\n");
-        Map<String,Pair<Integer,Integer>> dict = new HashMap<>();
+        Map<String,Pair<Double,Double>> dict = new HashMap<>();
         List<String> values = new ArrayList<>();
         String res="";
         for (String l : lines){
             String[] k_v = l.split("\t");
             String[] key = k_v[0].split(":");
-            dict.put(key[0],new Pair<>(Integer.parseInt(key[1]),0));
+            dict.put(key[0],new Pair<>(Double.valueOf(key[1]),0.0));
             if (!(k_v.length==1)) {
                 values.add(k_v[1]);
             }
@@ -40,9 +40,20 @@ public class Parser {
             String[] nodes = s.split(",");
             for(String n  : nodes) {
                 String[] val = n.split(":");
-                int auth = Integer.parseInt(val[1]);
+                double auth = Double.valueOf(val[1]);
                 dict.replace(val[0], new Pair<>(dict.get(val[0]).getKey(), auth));
             }
+        }
+        double norm_auth = 0.0;
+        double norm_hub = 0.0;
+        for(String k : dict.keySet()){
+            norm_auth+=(dict.get(k).getKey())*(dict.get(k).getKey());
+            norm_hub+=(dict.get(k).getValue())*(dict.get(k).getValue());
+        }
+        norm_auth= Math.sqrt(norm_auth);
+        norm_hub= Math.sqrt(norm_hub);
+        for(String k : dict.keySet()){
+            dict.replace(k,new Pair<>((dict.get(k).getKey()/norm_hub),(dict.get(k).getValue()/norm_auth)));
         }
         for (String l : lines){
             String[] k_v = l.split("\t");
