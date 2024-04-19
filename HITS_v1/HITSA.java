@@ -30,13 +30,13 @@ public class HITSA {
     public static class MyReducer extends Reducer<Text, Text, Text, Text> {
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            int auth=0;
+            double auth=0;
             String res="";
             for (Text t : values){
                 if (!String.valueOf(t).equals("-1")){
                     try{
                         String[] val = String.valueOf(t).split(":");
-                        auth += Integer.parseInt(val[1]);
+                        auth += Double.valueOf(val[1]);
                         res+=val[0]+",";
                     }catch (Exception e){}
                 }
