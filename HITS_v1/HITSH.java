@@ -30,13 +30,13 @@ public class HITSH {
     public static class MyReducer extends Reducer<Text, Text, Text, Text> {
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            int hub=0;
+            double hub=0;
             String res="";
             for (Text t : values){
                 if (!String.valueOf(t).equals("-1")){
                     try{
                         String[] val = String.valueOf(t).split(":");
-                        hub += Integer.parseInt(val[1]);
+                        hub += Double.valueOf(val[1]);
                         res+=String.valueOf(t)+",";
                     }catch (Exception e){}
                 }
