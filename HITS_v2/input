@@ -1,0 +1,5 @@
+a	nodes:b,e,|auth:0.1|hub:0.2
+b	nodes:e,|auth:0.3|hub:0.4
+c	nodes:a,d,|auth:0.5|hub:0.6
+d	nodes:b,e,|auth:0.7|hub:0.8
+e	nodes:|auth:0.9|hub:1.0
