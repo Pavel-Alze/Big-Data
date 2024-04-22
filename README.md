@@ -6,4 +6,4 @@
 
 `(4) Fourth task` - HITS & normalization  -  via  -  MapReduce
       
-* HITS_v2 - right version
+* HITS_v2 - the correct version
