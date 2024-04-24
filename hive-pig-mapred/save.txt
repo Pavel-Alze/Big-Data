@@ -32,7 +32,7 @@ JOIN 1-3:
 select * from firsttable left join thirdtable on firsttable.name = thirdtable.name;
 
 JOIN 2-3:
-select * from secondtable left join thirdtable on secondtable.name = thirdtable.name;
+select * from secondtable join thirdtable on secondtable.name = thirdtable.name;
 
 GROUP BY:
 select car,count(car) from thirdtable group by car;
