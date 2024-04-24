@@ -14,6 +14,7 @@ import java.io.IOException;
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+        # входной файл смотреть `input`
         Configuration conf = new Configuration();
         Job job = new Job(conf, "HITSA");
         job.setJarByClass(Main.class);
@@ -25,6 +26,8 @@ public class Main {
         job.setOutputValueClass(Text.class);
         FileInputFormat.addInputPath(job, new Path("/root/BigData/mysources/input.txt"));
         FileOutputFormat.setOutputPath(job, new Path("/root/BigData/mysources/ath_out"));
+        # запуск программы по обновлению авторитетности
+        # выходной файл смотреть `ath`
         if(job.waitForCompletion(true)) {
             job = new Job(conf, "NormA");
             job.setJarByClass(Main.class);
@@ -36,6 +39,8 @@ public class Main {
             job.setOutputValueClass(Text.class);
             FileInputFormat.addInputPath(job, new Path("/root/BigData/mysources/ath_out/part-r-00000"));
             FileOutputFormat.setOutputPath(job, new Path("/root/BigData/mysources/norma_out"));
+            # запуск нормализации
+            # выходной файл смотреть `norma`
             if(job.waitForCompletion(true)) {
                 job = new Job(conf, "HITSH");
                 job.setJarByClass(Main.class);
@@ -47,6 +52,8 @@ public class Main {
                 job.setOutputValueClass(Text.class);
                 FileInputFormat.addInputPath(job, new Path("/root/BigData/mysources/norma_out/part-r-00000"));
                 FileOutputFormat.setOutputPath(job, new Path("/root/BigData/mysources/hub_out"));
+                # запуск программы по обновлению посредничества
+                # выходной файл смотреть `hub`
                 if(job.waitForCompletion(true)){
                     job = new Job(conf, "NormH");
                     job.setJarByClass(Main.class);
@@ -58,6 +65,8 @@ public class Main {
                     job.setOutputValueClass(Text.class);
                     FileInputFormat.addInputPath(job, new Path("/root/BigData/mysources/hub_out/part-r-00000"));
                     FileOutputFormat.setOutputPath(job, new Path("/root/BigData/mysources/normh_out"));
+                    # запуск нормализации
+                    # выходной файл смотреть `normh`
                     System.exit(job.waitForCompletion(true) ? 0 : 1);
                 }
             }
