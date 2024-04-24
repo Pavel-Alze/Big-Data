@@ -12,6 +12,7 @@ public class Normalized {
 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             String[] kv = String.valueOf(value).split("\t");
+            # отправляем из маппера всю строку, но с ключом "norm", чтобы на редьюсере все строки скомпоновались вместе
             context.write(new Text("norm"),new Text(kv[0]+"\t"+kv[1]));
         }
     }
@@ -19,6 +20,8 @@ public class Normalized {
     public static class MyReducer extends Reducer<Text, Text, Text, Text> {
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            # проводим нормализацию по формуле. делаем сразу для двух величин
+            # если величина уже была нормализована, то она и не поменяется
             Double normA = 0.0;
             Double normH = 0.0;
             ArrayList<String> texts = new ArrayList<>();
@@ -40,6 +43,7 @@ public class Normalized {
                 String nodes = value[0];
                 String[] auth = value[1].split(":");
                 String[] hub = value[2].split(":");
+                # возвращаем исходную строку, но с нормализованными величинами
                 context.write(new Text(key_node),new Text(nodes+"|auth:"+Double.valueOf(auth[1])/normA+"|hub:"+Double.valueOf(hub[1])/normH));
             }
         }
