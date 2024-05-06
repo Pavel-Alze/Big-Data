@@ -25,7 +25,7 @@ public class Normalized {
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             Double norm = 0.0;
             for (Text t : values){
-                norm+=Double.valueOf(t.toString());
+                norm+=Double.valueOf(t.toString())*Double.valueOf(t.toString());
             }
             norm=Math.sqrt(norm);
             context.write(key,new Text(String.valueOf(norm)));
