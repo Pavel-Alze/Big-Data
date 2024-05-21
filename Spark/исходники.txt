@@ -1,0 +1,74 @@
+
+# SQL
+# Найти пользователя, который чаще остальных реагирует на упоминания его в сообщениях.
+
+import findspark
+findspark.init()
+findspark.find()
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("csv_processing").getOrCreate()
+
+df = spark.read.csv("ira_tweets_csv_hashed.csv", header=True, inferSchema=True)
+df.createOrReplaceTempView("tweets")
+
+result = spark.sql("""
+    SELECT userid, COUNT(*) AS count 
+    FROM (
+        SELECT DISTINCT users.userid, users.in_reply_to_tweetid 
+        FROM (
+            SELECT userid, in_reply_to_tweetid 
+            FROM tweets 
+            WHERE in_reply_to_tweetid IS NOT NULL
+        ) AS users
+        JOIN (
+            SELECT tweetid, user_mentions 
+            FROM tweets 
+            WHERE user_mentions IS NOT NULL
+        ) AS mentions
+        ON mentions.tweetid = users.in_reply_to_tweetid
+        WHERE mentions.user_mentions LIKE CONCAT('%', users.userid, '%')
+    ) AS filtered
+    GROUP BY userid 
+    ORDER BY count DESC
+    LIMIT 1
+""")
+
+result.select('userid').show()
+
+spark.stop()
+
+--------------------------
+
+# RDD
+# Найти пользователя, который чаще остальных реагирует на упоминания его в сообщениях.
+
+import findspark
+findspark.init()
+findspark.find()
+
+from pyspark import SparkContext
+
+sc = SparkContext(appName="csv_processing")
+
+lines = sc.textFile("ira_tweets_csv_hashed.csv")
+
+filtered_lines = lines.filter(lambda line: line.split(",")[15] is not None)
+
+users_rdd = filtered_lines.map(lambda line: (line.split(",")[15], line.split(",")[1]))
+
+mentions_rdd = lines.filter(lambda line: line.split(",")[29] is not None).map(lambda line: (line.split(",")[0], line.split(",")[29]))
+
+joined_rdd = users_rdd.join(mentions_rdd)
+
+filtered_joined_rdd = joined_rdd.filter(lambda x: x[1][1].find((x[1][0])[1:len(x[1][0])-1]) != -1)
+
+count_rdd = filtered_joined_rdd.map(lambda x: (x[1][0], 1)).reduceByKey(lambda a, b: a + b)
+
+most_mentioned_user = count_rdd.takeOrdered(1, key=lambda x: -x[1])
+
+for user in most_mentioned_user:
+    print(user[0])
+
+sc.stop()
