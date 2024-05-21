@@ -39,7 +39,7 @@ result.select('userid').show()
 
 spark.stop()
 
---------------------------
+---------------------------
 
 # RDD
 # Найти пользователя, который чаще остальных реагирует на упоминания его в сообщениях.
@@ -70,5 +70,76 @@ most_mentioned_user = count_rdd.takeOrdered(1, key=lambda x: -x[1])
 
 for user in most_mentioned_user:
     print(user[0])
+
+sc.stop()
+
+---------------------------
+
+# SQL
+# Найти пользователя из РФ, чаще остальных упоминающего фамилии российских политических деятелей (на русском).
+
+import findspark
+findspark.init()
+findspark.find()
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("csv_processing").getOrCreate()
+
+df = spark.read.csv("ira_tweets_csv_hashed.csv", header=True, inferSchema=True)
+df.createOrReplaceTempView("tweets")
+
+politics = ["Путин", "Жириновский", "Зюганов", "Песков", "Лавров", "Пригожин", "Мишустин", "Шойгу", "Медведев", "Матвиенко"]
+
+query = "SELECT userid, COUNT(*) as count FROM tweets WHERE account_language = 'ru' AND tweet_language = 'ru' AND ("
+query += f"tweet_text LIKE '%{politics[0]}%'"
+for p in politics[1:]:
+    query += f" OR tweet_text LIKE '%{p}%'"
+query += ') GROUP BY userid ORDER BY count DESC LIMIT 1'
+
+result = spark.sql(query)
+result.select('userid').show()
+
+spark.stop()
+
+---------------------------
+
+# RDD
+# Найти пользователя из РФ, чаще остальных упоминающего фамилии российских политических деятелей (на русском).
+
+import findspark
+findspark.init()
+findspark.find()
+
+from pyspark import SparkContext, SparkConf
+
+conf = SparkConf().setAppName("csv_processing")
+sc = SparkContext(conf=conf)
+
+file_path = "ira_tweets_csv_hashed.csv"
+rdd = sc.textFile(file_path)
+
+header = rdd.first()
+columns = header.split(',')
+
+data_rdd = rdd.filter(lambda line: line != header).map(lambda line: line.split(','))
+
+userid_idx = 1
+account_language_idx = 10
+tweet_language_idx = 11
+tweet_text_idx = 12
+
+politics = ["Путин", "Жириновский", "Зюганов", "Песков", "Лавров", "Пригожин", "Мишустин", "Шойгу", "Медведев", "Матвиенко"]
+
+def contains_politics(text):
+    return any(politician in text for politician in politics)
+
+filtered_rdd = data_rdd.filter(lambda x: x[account_language_idx] == '"ru"' and x[tweet_language_idx] == '"ru"' and contains_politics(x[tweet_text_idx])) \
+                       .map(lambda x: (x[userid_idx], 1)) \
+                       .reduceByKey(lambda a, b: a + b) \
+                       .sortBy(lambda x: -x[1])
+
+for result in filtered_rdd.take(1):
+    print(result[0])
 
 sc.stop()
