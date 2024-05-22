@@ -220,3 +220,87 @@ for result in filtered_rdd.take(1):
     print(result[0])
 
 sc.stop()
+
+---------------------------
+
+
+# GraphFrame
+# Найти пользователя, начавшего n-ю по количеству сообщений непрерывную цепочку.
+
+import findspark
+findspark.init()
+findspark.find()
+
+from graphframes import *
+from pyspark.sql import SparkSession
+from pyspark import SparkContext, SparkConf
+
+conf = SparkConf().setAppName("csv_processing")
+sc = SparkContext(conf=conf)
+
+
+spark = SparkSession.builder.appName("csv_processing").getOrCreate()
+
+df = spark.read.csv("ira_tweets_csv_hashed.csv", header=True, inferSchema=True)
+df.createOrReplaceTempView("tweets")
+
+# Создание вершин графа (пользователей)
+v = spark.sql("""SELECT DISTINCT userid AS id FROM tweets""")
+v.show()
+# Создание ребер графа (взаимодействия между пользователями)
+e = spark.sql("""SELECT DISTINCT userid AS src, in_reply_to_userid AS dst, tweetid FROM tweets""")
+e.createOrReplaceTempView("edges")
+e.show()
+# Создание графа
+graph = GraphFrame(v, e)
+
+sc.setCheckpointDir("/tmp")
+
+# Использование алгоритма поиска компонент сильной связности (SCC)
+scc_result = graph.stronglyConnectedComponents(maxIter=2)
+scc_result.show()
+scc_result.createOrReplaceTempView("scc_result")
+
+n = 3  # Параметр n, указывающий номер цепочки по длине
+component_sizes = spark.sql(f"""
+    SELECT component, COUNT(*) as count 
+    FROM scc_result 
+    GROUP BY component
+    ORDER BY count DESC
+    LIMIT {n}
+""")
+component_sizes.createOrReplaceTempView("component_sizes")
+component_sizes.show()
+
+# Получение n-й по размеру компоненты
+nth_largest_component = spark.sql(f"""
+    SELECT component
+    FROM (
+        SELECT component,count, ROW_NUMBER() OVER (ORDER BY count DESC) as row_num
+        FROM component_sizes
+    ) WHERE row_num = {n}
+""").collect()[0]["component"]
+
+# Получение всех пользователей в n-й по размеру компоненте
+users_in_nth_largest_component = spark.sql(f"""
+    SELECT id
+    FROM scc_result
+    WHERE component = {nth_largest_component}
+""")
+
+# Создание временного представления для пользователей в n-й по размеру компоненте
+users_in_nth_largest_component.createOrReplaceTempView("users")
+
+# Нахождение пользователя, начавшего цепочку (пользователь, который не является ни у кого в ответе)
+starting_user = spark.sql("""
+    SELECT *
+    FROM users
+    LEFT JOIN edges ON users.id = edges.src
+    WHERE edges.dst IS NULL LIMIT 1
+""")
+
+# Вывод результата
+starting_user.show()
+
+# Остановка SparkSession
+spark.stop()
