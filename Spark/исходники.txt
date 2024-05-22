@@ -41,7 +41,7 @@ spark.stop()
 
 ---------------------------
 
-# RDD
+# RDD + Граф
 # Найти пользователя, который чаще остальных реагирует на упоминания его в сообщениях.
 
 import findspark
@@ -49,27 +49,56 @@ findspark.init()
 findspark.find()
 
 from pyspark import SparkContext
+import networkx as nx
+import matplotlib.pyplot as plt
 
 sc = SparkContext(appName="csv_processing")
 
-lines = sc.textFile("ira_tweets_csv_hashed.csv")
+rdd = sc.textFile("ira_tweets_csv_hashed.csv")
 
-filtered_lines = lines.filter(lambda line: line.split(",")[15] is not None)
+header = rdd.first()
+columns = header.split(',')
 
-users_rdd = filtered_lines.map(lambda line: (line.split(",")[15], line.split(",")[1]))
+G = nx.DiGraph()
 
-mentions_rdd = lines.filter(lambda line: line.split(",")[29] is not None).map(lambda line: (line.split(",")[0], line.split(",")[29]))
+G.add_node("rdd: raw data")
+data_rdd = rdd.filter(lambda line: line != header).map(lambda line: line.split(','))
+G.add_node("data_rdd: split columns")
+G.add_edge("rdd: raw data", "data_rdd: split columns")
+
+tweetid_idx = 0
+userid_idx = 1
+in_reply_to_tweedid_idx = 15
+user_mentions_idx = 29
+
+users_rdd = data_rdd.filter(lambda x: x[in_reply_to_tweedid_idx] is not None).map(lambda x: (x[in_reply_to_tweedid_idx], x[userid_idx]))
+G.add_node("users_rdd: filtered")
+G.add_edge("data_rdd: split columns", "users_rdd: filtered")
+
+mentions_rdd = data_rdd.filter(lambda x: x[user_mentions_idx] is not None).map(lambda x: (x[tweetid_idx], x[user_mentions_idx]))
+G.add_node("mentions_rdd: filtered")
+G.add_edge("data_rdd: split columns", "mentions_rdd: filtered")
 
 joined_rdd = users_rdd.join(mentions_rdd)
+G.add_node("joined_rdd: joined")
+G.add_edge("users_rdd: filtered", "joined_rdd: joined")
+G.add_edge("mentions_rdd: filtered", "joined_rdd: joined")
 
 filtered_joined_rdd = joined_rdd.filter(lambda x: x[1][1].find((x[1][0])[1:len(x[1][0])-1]) != -1)
+G.add_node("filtered_joined_rdd: filtered")
+G.add_edge("joined_rdd: joined", "filtered_joined_rdd: filtered")
 
-count_rdd = filtered_joined_rdd.map(lambda x: (x[1][0], 1)).reduceByKey(lambda a, b: a + b)
+count_rdd = filtered_joined_rdd.map(lambda x: (x[1][0], 1)).reduceByKey(lambda a, b: a + b).sortBy(lambda x: -x[1])
+G.add_node("count_rdd: counted")
+G.add_edge("filtered_joined_rdd: filtered", "count_rdd: counted")
 
-most_mentioned_user = count_rdd.takeOrdered(1, key=lambda x: -x[1])
+for result in count_rdd.take(1):
+    print(result[0])
 
-for user in most_mentioned_user:
-    print(user[0])
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_size=3000, node_color="skyblue", font_size=10, font_weight="bold", arrows=True)
+plt.title('RDD Graph')
+plt.show()
 
 sc.stop()
 
