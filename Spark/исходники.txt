@@ -41,6 +41,7 @@ spark.stop()
 
 ---------------------------
 
+
 # RDD + Граф
 # Найти пользователя, который чаще остальных реагирует на упоминания его в сообщениях.
 
@@ -102,7 +103,53 @@ plt.show()
 
 sc.stop()
 
+--------------------------
+
+
+# GraphFrame
+# Найти наибольшую компоненту связности социального графа (группу пользователей, которые общаются преимущественно друг с другом) 
+# для российских пользователей.
+
+import findspark
+findspark.init()
+findspark.find()
+
+from graphframes import *
+from pyspark.sql import SparkSession
+from pyspark import SparkContext, SparkConf
+
+conf = SparkConf().setAppName("csv_processing")
+sc = SparkContext(conf=conf)
+
+
+spark = SparkSession.builder.appName("csv_processing").getOrCreate()
+
+df = spark.read.csv("ira_tweets_csv_hashed.csv", header=True, inferSchema=True)
+df.createOrReplaceTempView("tweets")
+
+cleaned_tweets = spark.sql("SELECT * FROM tweets WHERE user_reported_location LIKE '%Россия%'")
+cleaned_tweets.createOrReplaceTempView("clean")
+
+v = spark.sql("SELECT DISTINCT userid AS id FROM clean")
+v.show()
+e = spark.sql("SELECT DISTINCT userid AS src, in_reply_to_userid AS dst FROM clean WHERE NOT in_reply_to_userid IS NULL")
+e.show()
+
+g = GraphFrame(v, e)
+
+sc.setCheckpointDir("/tmp")
+
+components = g.connectedComponents()
+components.show()
+components.createOrReplaceTempView("comp")
+
+spark.sql("SELECT component, COUNT(*) AS count FROM comp GROUP BY component ORDER BY count DESC LIMIT 1").show()
+
+sc.stop()
+spark.stop()
+
 ---------------------------
+
 
 # SQL
 # Найти пользователя из РФ, чаще остальных упоминающего фамилии российских политических деятелей (на русском).
@@ -132,6 +179,7 @@ result.select('userid').show()
 spark.stop()
 
 ---------------------------
+
 
 # RDD
 # Найти пользователя из РФ, чаще остальных упоминающего фамилии российских политических деятелей (на русском).
