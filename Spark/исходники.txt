@@ -116,6 +116,8 @@ findspark.find()
 from graphframes import *
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
+import networkx as nx
+import matplotlib.pyplot as plt
 
 conf = SparkConf().setAppName("csv_processing")
 sc = SparkContext(conf=conf)
@@ -123,26 +125,48 @@ sc = SparkContext(conf=conf)
 
 spark = SparkSession.builder.appName("csv_processing").getOrCreate()
 
+G = nx.DiGraph()
+
 df = spark.read.csv("ira_tweets_csv_hashed.csv", header=True, inferSchema=True)
 df.createOrReplaceTempView("tweets")
+G.add_node("tweets: raw data")
 
-cleaned_tweets = spark.sql("SELECT * FROM tweets WHERE user_reported_location LIKE '%Россия%'")
-cleaned_tweets.createOrReplaceTempView("clean")
+local_tweets = spark.sql("SELECT * FROM tweets WHERE user_reported_location LIKE '%Россия%'")
+local_tweets.createOrReplaceTempView("local")
+G.add_node("local_tweets:get by area")
+G.add_edge("tweets: raw data","local_tweets:get by area")
 
-v = spark.sql("SELECT DISTINCT userid AS id FROM clean")
+v = spark.sql("SELECT DISTINCT userid AS id FROM local")
+G.add_node("vertex: get vertex")
+G.add_edge("local_tweets:get by area","vertex: get vertex")
 v.show()
-e = spark.sql("SELECT DISTINCT userid AS src, in_reply_to_userid AS dst FROM clean WHERE NOT in_reply_to_userid IS NULL")
+e = spark.sql("SELECT DISTINCT userid AS src, in_reply_to_userid AS dst FROM local WHERE NOT in_reply_to_userid IS NULL")
+G.add_node("edges: get edges")
+G.add_edge("local_tweets:get by area","edges: get edges")
 e.show()
 
 g = GraphFrame(v, e)
+
+G.add_node("graph: make graph")
+G.add_edge("edges: get edges","graph: make graph")
+G.add_edge("vertex: get vertex","graph: make graph")
 
 sc.setCheckpointDir("/tmp")
 
 components = g.connectedComponents()
 components.show()
 components.createOrReplaceTempView("comp")
+G.add_node("components: take components")
+G.add_edge("graph: make graph","components: take components")
 
 spark.sql("SELECT component, COUNT(*) AS count FROM comp GROUP BY component ORDER BY count DESC LIMIT 1").show()
+G.add_node("largest_component: filtered")
+G.add_edge("components: take components","largest_component: filtered")
+
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_size=1500, node_color="skyblue", font_size=6, font_weight="bold", arrows=True)
+plt.title('RDD Graph')
+plt.show()
 
 sc.stop()
 spark.stop()
