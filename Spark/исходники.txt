@@ -58,7 +58,6 @@ sc = SparkContext(appName="csv_processing")
 rdd = sc.textFile("ira_tweets_csv_hashed.csv")
 
 header = rdd.first()
-columns = header.split(',')
 
 G = nx.DiGraph()
 
@@ -197,7 +196,6 @@ file_path = "ira_tweets_csv_hashed.csv"
 rdd = sc.textFile(file_path)
 
 header = rdd.first()
-columns = header.split(',')
 
 data_rdd = rdd.filter(lambda line: line != header).map(lambda line: line.split(','))
 
@@ -248,7 +246,7 @@ df.createOrReplaceTempView("tweets")
 v = spark.sql("""SELECT DISTINCT userid AS id FROM tweets""")
 v.show()
 
-e = spark.sql("""SELECT DISTINCT userid AS src, in_reply_to_userid AS dst, tweetid FROM tweets""")
+e = spark.sql("""SELECT DISTINCT userid AS src, in_reply_to_userid AS dst FROM tweets""")
 e.createOrReplaceTempView("edges")
 e.show()
 
@@ -294,8 +292,6 @@ starting_user = spark.sql("""
     WHERE edges.dst IS NULL LIMIT 1
 """)
 
-# Вывод результата
 starting_user.show()
 
-# Остановка SparkSession
 spark.stop()
