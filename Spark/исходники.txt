@@ -278,7 +278,7 @@ graph = GraphFrame(v, e)
 
 sc.setCheckpointDir("/tmp")
 
-scc_result = graph.stronglyConnectedComponents(maxIter=2)
+scc_result = graph.connectedComponents()
 scc_result.show()
 scc_result.createOrReplaceTempView("scc_result")
 
@@ -316,6 +316,6 @@ starting_user = spark.sql("""
     WHERE edges.dst IS NULL LIMIT 1
 """)
 
-starting_user.show()
+starting_user.select('id').show()
 
 spark.stop()
